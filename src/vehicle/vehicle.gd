@@ -86,7 +86,7 @@ func setup_visuals(is_local_player: bool) -> void:
 	_visuals = VehicleVisuals.new()
 	_visuals.name = "Visuals"
 	add_child(_visuals)
-	_visuals.setup(VehicleFactory.get_player_color(color_index), player_name)
+	_visuals.setup(VehicleFactory.get_player_color(color_index), player_name, Tuning.model_path)
 	_visuals.set_name_tag_visible(not is_local_player)
 	_visuals.sync_to_state(state)
 

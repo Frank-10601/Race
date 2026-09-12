@@ -50,7 +50,7 @@ func setup(color: Color, player_name: String, model_path: String = "") -> void:
 
 	var model: Dictionary = VehicleFactory.load_model(model_path)
 	if model.is_empty():
-		# Phase 0 : primitives. Phase 3 : la branche du dessus prendra le relais.
+		# Aucun modele : formes primitives, avec leurs quatre roues.
 		_body_node = VehicleFactory.create_body(color)
 		add_child(_body_node)
 		for suffix: String in ["FL", "FR", "RL", "RR"]:
@@ -59,9 +59,19 @@ func setup(color: Color, player_name: String, model_path: String = "") -> void:
 			_wheels.append(wheel)
 	else:
 		var root: Node3D = model["root"]
+		# Le modele a son origine AU SOL (voir tools/prepare_vehicle.py), alors
+		# que ce noeud suit le centre du vehicule, situe a `ride_height`.
+		root.position = Vector3(0.0, -Tuning.ride_height, 0.0)
 		add_child(root)
 		_body_node = model["body"]
+		# Roues separees si le modele en fournit ; sinon elles font partie de la
+		# carrosserie et il n'y a rien a animer.
 		_wheels.assign(model["wheels"])
+
+		var marker: Node3D = VehicleFactory.create_color_marker(color)
+		var top: float = _model_top(root, root.transform)
+		marker.position = Vector3(0.0, (top if is_finite(top) else 0.9) + 0.09, 0.0)
+		add_child(marker)
 
 	for index: int in _wheels.size():
 		_wheels[index].position = VehicleFactory.WHEEL_POSITIONS[index] \
@@ -69,6 +79,27 @@ func setup(color: Color, player_name: String, model_path: String = "") -> void:
 
 	_name_tag = VehicleFactory.create_name_tag(player_name)
 	add_child(_name_tag)
+
+
+## Hauteur du toit du modele, dans le repere du vehicule.
+##
+## Les transformations doivent etre CUMULEES le long de la hierarchie : un
+## modele importe empile plusieurs noeuds (echelle, rotation, recentrage) avant
+## d'arriver aux maillages, et ne lire que la transformation locale de chaque
+## maillage donne une hauteur sans rapport avec la realite.
+func _model_top(node: Node3D, accumulated: Transform3D) -> float:
+	var highest: float = -INF
+	for child: Node in node.get_children():
+		var child_3d: Node3D = child as Node3D
+		if child_3d == null:
+			continue
+		var combined: Transform3D = accumulated * child_3d.transform
+		var mesh_instance: MeshInstance3D = child_3d as MeshInstance3D
+		if mesh_instance != null and mesh_instance.mesh != null:
+			var box: AABB = combined * mesh_instance.mesh.get_aabb()
+			highest = maxf(highest, box.position.y + box.size.y)
+		highest = maxf(highest, _model_top(child_3d, combined))
+	return highest
 
 
 func set_player_name(player_name: String) -> void:

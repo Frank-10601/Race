@@ -193,9 +193,17 @@ static func create_name_tag(player_name: String) -> Label3D:
 	return label
 
 
-## Point d'entree de la phase 3 : charge un modele `.glb` et en extrait la
-## carrosserie et les quatre roues. Retourne un dictionnaire vide si le modele
-## est absent, ce qui fait retomber l'appelant sur les primitives.
+## Charge un modele `.glb` et en extrait la carrosserie et, si elles existent,
+## les quatre roues.
+##
+## Les roues sont FACULTATIVES. Un modele genere par IA arrive presque toujours
+## d'un seul tenant : sa carrosserie et ses roues forment un maillage unique.
+## On l'accepte tel quel — la voiture s'affiche correctement, ses roues ne
+## tournent simplement pas. Exiger des roues separees reviendrait a refuser la
+## quasi-totalite des modeles pour un detail que la phase 3 traitera.
+##
+## Retourne un dictionnaire vide si le modele est absent ou illisible, ce qui
+## fait retomber l'appelant sur les primitives.
 static func load_model(model_path: String) -> Dictionary:
 	if model_path.is_empty() or not ResourceLoader.exists(model_path):
 		return {}
@@ -208,17 +216,41 @@ static func load_model(model_path: String) -> Dictionary:
 		return {}
 
 	var body: Node3D = instance.find_child("Body", true, false) as Node3D
+	if body == null:
+		# A defaut de noeud nomme, la racine fait office de carrosserie.
+		body = instance
+
 	var wheels: Array[Node3D] = []
 	for suffix: String in ["FL", "FR", "RL", "RR"]:
 		var wheel: Node3D = instance.find_child("Wheel" + suffix, true, false) as Node3D
 		if wheel == null:
-			push_warning("Roue Wheel%s absente de %s : primitives utilisees." % [suffix, model_path])
-			instance.queue_free()
-			return {}
+			wheels.clear()
+			break
 		wheels.append(wheel)
-	if body == null:
-		push_warning("Noeud Body absent de %s : primitives utilisees." % model_path)
-		instance.queue_free()
-		return {}
 
 	return {"root": instance, "body": body, "wheels": wheels}
+
+
+## Repere de couleur pose sur le toit.
+##
+## Un modele importe garde ses propres textures : teinter la carrosserie
+## salirait la peinture sans rendre les joueurs plus reconnaissables. Un repere
+## franc, lui, se lit a distance et de dos — ce qui compte en course.
+static func create_color_marker(color: Color) -> Node3D:
+	var marker: Node3D = Node3D.new()
+	marker.name = "ColorMarker"
+
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.45
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 0.22
+
+	var bar: MeshInstance3D = MeshInstance3D.new()
+	var mesh: BoxMesh = BoxMesh.new()
+	mesh.size = Vector3(1.05, 0.16, 0.34)
+	bar.mesh = mesh
+	bar.material_override = material
+	marker.add_child(bar)
+	return marker

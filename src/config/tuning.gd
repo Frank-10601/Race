@@ -25,6 +25,8 @@ var steer_rate_at_max_speed: float = 0.35
 var steer_response: float = 10.0
 var steer_visual_angle: float = 32.0
 var air_steer_factor: float = 0.30
+## Chemin du modele 3D, ou chaine vide pour les formes primitives.
+var model_path: String = ""
 
 # --- [grip] ------------------------------------------------------------------
 var lateral_grip: float = 7.0
@@ -159,6 +161,7 @@ const _INT_KEYS: Array = [
 ]
 
 const _STRING_KEYS: Array = [
+	["model_path", "vehicle", "model_path"],
 	["default_transport", "network", "default_transport"],
 ]
 
