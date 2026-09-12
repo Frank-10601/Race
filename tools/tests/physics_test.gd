@@ -11,6 +11,9 @@ extends Node
 
 const TRACK_SCENE: String = "res://src/track/test_track.tscn"
 
+## Surface plate a l'ecart du trace, pour mesurer le modele et non le circuit.
+const TEST_AREA: Vector3 = Vector3(-200.0, 0.0, -200.0)
+
 var _track: Node3D = null
 var _vehicle: Vehicle = null
 var _failures: int = 0
@@ -47,6 +50,8 @@ func _run_all() -> void:
 	_test_handbrake_drift()
 	_test_grip_recovery()
 	_test_determinism()
+	_test_ramps()
+	_test_walls()
 
 	print("-----------------------------------")
 	if _failures == 0:
@@ -78,7 +83,9 @@ func _test_acceleration() -> void:
 
 ## Plein gaz prolonge : la vitesse doit se stabiliser pres de `max_speed`.
 func _test_top_speed() -> void:
-	var state: VehicleState = _fresh_state()
+	# En zone degagee : depuis la grille de depart, la voiture rencontrerait les
+	# rampes et la mesure ne voudrait plus rien dire.
+	var state: VehicleState = _launched_state(0.0)
 	state = _run(state, _make_input(1.0, 0.0, 0.0, false), 60 * 12)
 	var speed: float = state.get_forward_speed()
 	print("  vitesse de pointe : %.1f m/s (%.0f km/h)" % [speed, speed * 3.6])
@@ -111,12 +118,19 @@ func _test_steering() -> void:
 	if change < 45.0:
 		_fail("braquage trop faible : %.0f degres en 1 s a 108 km/h" % change)
 
+	# Et surtout dans le BON SENS : braquer a droite doit envoyer la voiture a
+	# droite. Au depart, la piste pointe vers -Z, donc la droite est vers +X.
+	var sideways: float = turned.position.x - launched.position.x
+	print("  sens du virage : %+.1f m lateralement en braquant a droite" % sideways)
+	if sideways <= 0.0:
+		_fail("braquer a droite fait partir la voiture a gauche (%+.1f m)" % sideways)
+
 
 ## Frein a main : la voiture doit partir en glisse, c'est-a-dire que sa
 ## trajectoire doit s'ecarter de son nez.
 func _test_handbrake_drift() -> void:
 	var launched: VehicleState = _launched_state(30.0)
-	var drifting: VehicleState = _run(launched, _make_input(1.0, 0.0, 1.0, true), 36)
+	var drifting: VehicleState = _run(launched, _make_input(1.0, 0.0, 1.0, true), 90)
 	var slip: float = _slip_angle(drifting)
 	print("  derapage : glisse %.2f, angle de derive %.0f degres, au sol : %s"
 		% [drifting.drift, slip, "oui" if drifting.grounded else "non"])
@@ -127,14 +141,14 @@ func _test_handbrake_drift() -> void:
 	if slip < 10.0:
 		_fail("angle de derive trop faible : %.0f degres" % slip)
 	# Un derapage doit rester maitrisable : au-dela, c'est un tete-a-queue.
-	if slip > 55.0:
+	if slip > 45.0:
 		_fail("la voiture part en tete-a-queue : %.0f degres de derive" % slip)
 
 
 ## Apres relachement, l'adherence doit revenir progressivement, pas d'un coup.
 func _test_grip_recovery() -> void:
 	var launched: VehicleState = _launched_state(30.0)
-	var drifting: VehicleState = _run(launched, _make_input(1.0, 0.0, 1.0, true), 36)
+	var drifting: VehicleState = _run(launched, _make_input(1.0, 0.0, 1.0, true), 90)
 	var partial: VehicleState = _run(drifting, _make_input(1.0, 0.0, 0.4, false), 6)
 	var recovered: VehicleState = _run(drifting, _make_input(1.0, 0.0, 0.4, false), 60)
 	print("  reprise d'adherence : %.2f apres 0,1 s, %.2f apres 1 s"
@@ -182,6 +196,63 @@ func _test_determinism() -> void:
 		_fail("le replay partiel derive de %.9f m" % replay_gap)
 
 
+## La voiture doit FRANCHIR les rampes de la ligne droite, pas s'y arreter.
+## Une rampe inclinee dans le mauvais sens presente une face verticale : rien ne
+## le signale a la lecture du code, seul un essai le revele.
+func _test_ramps() -> void:
+	var transform: Transform3D = _track.call("get_spawn_transform", 0)
+	var state: VehicleState = VehicleState.create_at(
+		transform.origin + Vector3.UP * Tuning.spawn_height, transform.basis.get_euler().y)
+	state = _run(state, _make_input(0.0, 0.0, 0.0, false), 12)
+
+	# Plein gaz en ligne droite sur 6 s : de quoi passer les trois rampes.
+	var travelled_start: float = state.position.z
+	var airborne: int = 0
+	var minimum_speed: float = 1000.0
+	for step: int in 360:
+		state = _vehicle.physics.step(state, _make_input(1.0, 0.0, 0.0, false), Tuning.physics_delta)
+		if not state.grounded:
+			airborne += 1
+		# On ignore le tout debut, ou la voiture est encore a l'arret.
+		if step > 60:
+			minimum_speed = minf(minimum_speed, state.get_speed())
+	var distance: float = absf(state.position.z - travelled_start)
+	print("  rampes : %.0f m parcourus, %d pas en l'air, vitesse minimale %.0f km/h"
+		% [distance, airborne, minimum_speed * 3.6])
+
+	if distance < 180.0:
+		_fail("la voiture n'avance pas : %.0f m en 6 s (obstacle sur la ligne droite ?)" % distance)
+	if airborne < 10:
+		_fail("aucun saut detecte : les rampes ne font pas decoller la voiture")
+	if minimum_speed * 3.6 < 40.0:
+		_fail("la voiture est presque arretee (%.0f km/h) : elle a percute une rampe"
+			% (minimum_speed * 3.6))
+
+
+## Les murs doivent arreter la voiture. Depuis que le sol et les murs sont sur
+## des couches distinctes, c'est le seul obstacle que le corps de collision
+## percute encore : si cette separation etait mal faite, la voiture traverserait
+## le decor sans rien heurter.
+func _test_walls() -> void:
+	var transform: Transform3D = _track.call("get_spawn_transform", 0)
+	# Face au mur de droite, lancee a pleine vitesse perpendiculairement.
+	var state: VehicleState = VehicleState.create_at(
+		transform.origin + Vector3.UP * Tuning.spawn_height,
+		transform.basis.get_euler().y - PI * 0.5)
+	state = _run(state, _make_input(0.0, 0.0, 0.0, false), 12)
+	state.velocity = -state.get_basis().z * 40.0
+
+	var start_x: float = state.position.x
+	state = _run(state, _make_input(1.0, 0.0, 0.0, false), 90)
+	var travelled: float = state.position.x - start_x
+	print("  murs : %.1f m parcourus vers le mur (piste large de 24 m)" % travelled)
+
+	# Depuis x = -4,5, le mur de droite est a environ 16,5 m. La voiture doit
+	# etre arretee avant, pas continuer sur des dizaines de metres.
+	if travelled > 22.0:
+		_fail("la voiture traverse le mur : %.1f m parcourus" % travelled)
+
+
 # --- Utilitaires -------------------------------------------------------------
 
 func _fresh_state() -> VehicleState:
@@ -191,13 +262,17 @@ func _fresh_state() -> VehicleState:
 		transform.basis.get_euler().y)
 
 
-## Voiture lancee a la vitesse voulue, posee au sol, sur la ligne droite de
-## depart. On ne passe PAS par une phase d'acceleration : celle-ci conduirait la
-## voiture jusqu'aux rampes et aux murs, et les tests dependraient alors de la
-## geometrie de la piste plutot que du modele de conduite.
+## Voiture lancee a la vitesse voulue, posee au sol, sur une grande surface
+## plate A L'ECART du trace.
+##
+## Deux raisons de ne pas tester sur la piste : une phase d'acceleration y
+## conduirait la voiture jusqu'aux rampes, et un virage a fond l'enverrait dans
+## un mur. Les mesures refleteraient alors la geometrie du circuit et non le
+## modele de conduite, qui est ce qu'on veut verifier ici.
 func _launched_state(speed: float) -> VehicleState:
-	var state: VehicleState = _fresh_state()
-	state = _run(state, _make_input(0.0, 0.0, 0.0, false), 12)
+	var state: VehicleState = VehicleState.create_at(
+		TEST_AREA + Vector3.UP * Tuning.spawn_height, 0.0)
+	state = _run(state, _make_input(0.0, 0.0, 0.0, false), 16)
 	state.velocity = -state.get_basis().z * speed
 	return state
 

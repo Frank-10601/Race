@@ -28,7 +28,6 @@ const INPUT_REDUNDANCY: int = 3
 
 var track: Node3D = null
 var local_vehicle: Vehicle = null
-var lag: LagSimulator = LagSimulator.new()
 
 var _vehicles: Dictionary = {}          ## peer_id -> Vehicle
 var _vehicle_container: Node3D = null
@@ -68,7 +67,6 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	lag.process(delta)
 	if Net.is_server() or not Net.is_online():
 		_server_tick(delta)
 	elif Net.is_connected_to_server():
@@ -160,7 +158,12 @@ func _broadcast_snapshot() -> void:
 		if peer_id == Net.SERVER_PEER_ID:
 			continue
 		var acked: int = _last_processed.get(peer_id, 0)
-		_receive_snapshot.rpc_id(peer_id, tick, peer_ids, data, acked)
+		Net.lag.deliver(_send_snapshot, [peer_id, tick, peer_ids, data, acked])
+
+
+func _send_snapshot(peer_id: int, tick: int, peer_ids: PackedInt32Array,
+		data: PackedFloat32Array, acked: int) -> void:
+	_receive_snapshot.rpc_id(peer_id, tick, peer_ids, data, acked)
 
 
 # --- Boucle client -----------------------------------------------------------
@@ -182,7 +185,11 @@ func _client_tick(delta: float) -> void:
 	var pending: Array[InputFrame] = local_vehicle.get_pending_inputs()
 	if pending.is_empty():
 		return
-	_receive_inputs.rpc_id(Net.SERVER_PEER_ID, InputFrame.encode_batch(pending))
+	Net.lag.deliver(_send_inputs, [InputFrame.encode_batch(pending)])
+
+
+func _send_inputs(buffer: PackedByteArray) -> void:
+	_receive_inputs.rpc_id(Net.SERVER_PEER_ID, buffer)
 
 
 # --- Echanges reseau ---------------------------------------------------------
@@ -193,7 +200,7 @@ func _receive_inputs(buffer: PackedByteArray) -> void:
 	if not Net.is_server():
 		return
 	var peer_id: int = multiplayer.get_remote_sender_id()
-	lag.deliver(_apply_received_inputs, [peer_id, buffer])
+	Net.lag.deliver(_apply_received_inputs, [peer_id, buffer])
 
 
 func _apply_received_inputs(peer_id: int, buffer: PackedByteArray) -> void:
@@ -221,7 +228,7 @@ func _apply_received_inputs(peer_id: int, buffer: PackedByteArray) -> void:
 @rpc("authority", "call_remote", "unreliable_ordered")
 func _receive_snapshot(tick: int, peer_ids: PackedInt32Array,
 		data: PackedFloat32Array, acked: int) -> void:
-	lag.deliver(_apply_snapshot, [tick, peer_ids, data, acked])
+	Net.lag.deliver(_apply_snapshot, [tick, peer_ids, data, acked])
 
 
 func _apply_snapshot(tick: int, peer_ids: PackedInt32Array,

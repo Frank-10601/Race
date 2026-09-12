@@ -33,7 +33,7 @@ var handbrake_yaw_boost: float = 0.45
 var handbrake_braking: float = 6.0
 var grip_recovery: float = 3.5
 var drift_min_speed: float = 7.0
-var drift_slip_damping: float = 2.6
+var drift_slip_damping: float = 2.0
 var downforce_grip_bonus: float = 0.35
 
 # --- [ground] ----------------------------------------------------------------
@@ -41,7 +41,7 @@ var gravity: float = 28.0
 var ride_height: float = 0.42
 var ground_ray_length: float = 1.30
 var ground_snap_speed: float = 14.0
-var align_to_ground_speed: float = 7.0
+var align_to_ground_speed: float = 12.0
 var align_in_air_speed: float = 2.5
 var wall_bounce: float = 0.25
 var wall_speed_loss: float = 0.45

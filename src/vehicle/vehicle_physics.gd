@@ -34,8 +34,14 @@ const PROBE_OFFSETS: Array[Vector3] = [
 ## Hauteur de depart des rayons au-dessus du centre du chassis, en metres.
 const PROBE_START_HEIGHT: float = 0.60
 
-## Couche de collision du decor statique (piste, murs, rampes).
-const LAYER_WORLD: int = 1
+## Couches de collision. Le sol et les murs sont SEPARES, et c'est essentiel :
+##   - le sol (piste, rampes) est detecte par les rayons, et par eux seuls ;
+##   - les murs sont les seuls obstacles que le corps de collision percute.
+## Melanger les deux faisait heurter la pente des rampes par la boite de
+## collision : au lieu de sauter, la voiture s'ecrasait dessus et perdait les
+## trois quarts de sa vitesse.
+const LAYER_GROUND: int = 1
+const LAYER_WALL: int = 4
 
 ## En dessous de cette vitesse, la voiture ne pivote plus : evite de tourner
 ## sur place a l'arret, ce qui parait faux meme en arcade.
@@ -109,16 +115,31 @@ func step(state: VehicleState, input: InputFrame, delta: float) -> VehicleState:
 		next.drift = maxf(0.0, next.drift - Tuning.grip_recovery * delta)
 
 	# --- Lacet : le braquage fait pivoter la voiture --------------------------
+	#
+	# ORDRE CAPITAL. La vitesse est d'abord recomposee dans l'ANCIEN repere :
+	# elle conserve ainsi sa direction dans le monde pendant que le vehicule
+	# pivote. C'est precisement cet ecart entre le nez et la trajectoire qui
+	# constitue le derapage.
+	# Recomposer apres la rotation ferait tourner le vecteur vitesse avec la
+	# voiture : elle suivrait toujours son nez et ne pourrait jamais glisser,
+	# quel que soit le reglage d'adherence.
+	var world_velocity: Vector3 = forward * forward_speed + right * lateral_speed
+
 	next.yaw += _compute_yaw_rate(next, forward_speed, lateral_speed) * delta
 
-	# Le repere a change : on le reconstruit pour la suite du pas.
+	# Nouveau repere, apres rotation.
 	basis = VehicleState.basis_from(next.yaw, next.up)
 	forward = -basis.z
 	right = basis.x
 
 	# --- Adherence laterale : la trajectoire rattrape le nez de la voiture ----
-	# Amortissement exponentiel : le resultat ne depend pas de la taille du pas,
-	# ce qui est indispensable pour que le replay soit exact.
+	# La vitesse est redecomposee dans le NOUVEAU repere : sa composante
+	# laterale mesure maintenant le derapage reel, et c'est elle que l'adherence
+	# resorbe. Amortissement exponentiel, donc independant de la taille du pas —
+	# indispensable pour que le replay soit exact.
+	forward_speed = world_velocity.dot(forward)
+	lateral_speed = world_velocity.dot(right)
+
 	var speed_ratio: float = clampf(absf(forward_speed) / Tuning.max_speed, 0.0, 1.0)
 	var grip: float = lerpf(Tuning.lateral_grip, Tuning.handbrake_grip, next.drift)
 	grip += Tuning.lateral_grip * Tuning.downforce_grip_bonus * speed_ratio
@@ -128,8 +149,15 @@ func step(state: VehicleState, input: InputFrame, delta: float) -> VehicleState:
 	# --- Recomposition de la vitesse -----------------------------------------
 	var planar: Vector3 = forward * forward_speed + right * lateral_speed
 	if next.grounded:
-		# `planar` porte deja l'elan de la pente (forward suit le terrain).
-		# Le plaquage ne corrige que l'ecart de hauteur residuel.
+		# La voiture EPOUSE la pente : la vitesse est projetee sur le plan du
+		# sol en conservant sa norme. Sans cette projection, elle aborderait une
+		# rampe a l'horizontale et la percuterait de plein fouet.
+		var magnitude: float = planar.length()
+		var along_slope: Vector3 = planar.slide(_ground_normal)
+		if along_slope.length() > 0.001:
+			planar = along_slope.normalized() * magnitude
+
+		# Le plaquage ne corrige plus que l'ecart de hauteur residuel.
 		var height_error: float = Tuning.ride_height - _ground_distance
 		var snap: float = clampf(height_error * Tuning.ground_snap_speed,
 			-MAX_SNAP_SPEED, MAX_SNAP_SPEED)
@@ -196,7 +224,9 @@ func _compute_yaw_rate(state: VehicleState, forward_speed: float, lateral_speed:
 	# ... et s'annule a l'arret : sans roue qui roule, rien ne fait tourner.
 	var engagement: float = clampf(absolute_speed / STEER_ENGAGE_SPEED, 0.0, 1.0)
 
-	var rate: float = Tuning.steer_rate_rad * state.steer_smoothed * authority * engagement
+	# Signe : une entree positive veut dire « a droite », alors qu'un lacet
+	# croissant tourne vers la GAUCHE dans le repere de Godot. D'ou l'inversion.
+	var rate: float = -Tuning.steer_rate_rad * state.steer_smoothed * authority * engagement
 
 	# En marche arriere, la voiture tourne dans l'autre sens.
 	if forward_speed < 0.0:
@@ -204,7 +234,7 @@ func _compute_yaw_rate(state: VehicleState, forward_speed: float, lateral_speed:
 
 	# Rotation supplementaire pendant le derapage : c'est ce qui fait pivoter la
 	# voiture quand on tire le frein a main.
-	rate += Tuning.steer_rate_rad * Tuning.handbrake_yaw_boost * state.drift \
+	rate -= Tuning.steer_rate_rad * Tuning.handbrake_yaw_boost * state.drift \
 		* state.steer_smoothed * engagement
 
 	# Rappel anti-tete-a-queue. Sans lui, rien ne s'oppose a la rotation pendant
@@ -235,7 +265,7 @@ func _probe_ground(position: Vector3, basis: Basis) -> void:
 	var normal_sum: Vector3 = Vector3.ZERO
 
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
-	query.collision_mask = LAYER_WORLD
+	query.collision_mask = LAYER_GROUND
 	query.exclude = _exclusions
 	var space: PhysicsDirectSpaceState3D = _body.get_world_3d().direct_space_state
 

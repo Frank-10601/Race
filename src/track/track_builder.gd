@@ -7,8 +7,10 @@ extends RefCounted
 ## (bandes au sol, poteaux, murs) passent par des `MultiMesh` : un seul appel de
 ## rendu pour des centaines d'objets, ce qui compte beaucoup dans un navigateur.
 
-## Couche de collision du decor statique.
-const LAYER_WORLD: int = 1
+## Couches de collision, separees a dessein : le sol est sonde par les rayons du
+## vehicule, les murs sont percutes par son corps de collision.
+const LAYER_GROUND: int = 1
+const LAYER_WALL: int = 4
 
 ## Geometrie des bordures.
 const WALL_HEIGHT: float = 0.70
@@ -72,7 +74,7 @@ func _build_ground(parent: Node3D) -> void:
 	var size: float = 900.0
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Ground"
-	body.collision_layer = LAYER_WORLD
+	body.collision_layer = LAYER_GROUND
 	body.collision_mask = 0
 
 	var shape: CollisionShape3D = CollisionShape3D.new()
@@ -160,7 +162,7 @@ func _build_stripes(parent: Node3D) -> void:
 func _build_walls(parent: Node3D) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Walls"
-	body.collision_layer = LAYER_WORLD
+	body.collision_layer = LAYER_WALL
 	body.collision_mask = 0
 
 	var half_width: float = _plan.width * 0.5 + WALL_THICKNESS * 0.5

@@ -18,7 +18,10 @@ const OFF_TRACK_MARGIN: float = 3.0
 
 const RAMP_WIDTH: float = 9.0
 const RAMP_THICKNESS: float = 1.6
-const LAYER_WORLD: int = 1
+
+## Les rampes font partie du SOL : elles doivent etre sondees par les rayons,
+## pas percutees par le corps de collision.
+const LAYER_GROUND: int = 1
 
 var _builder: TrackBuilder = TrackBuilder.new()
 var _spawn_points: Array[Transform3D] = []
@@ -69,7 +72,7 @@ func get_spawn_count() -> int:
 func _build_ramps(plan: TrackPlan) -> void:
 	var body: StaticBody3D = StaticBody3D.new()
 	body.name = "Ramps"
-	body.collision_layer = LAYER_WORLD
+	body.collision_layer = LAYER_GROUND
 	body.collision_mask = 0
 	add_child(body)
 
@@ -91,8 +94,10 @@ func _build_ramps(plan: TrackPlan) -> void:
 		# Hauteur du centre pour que le bord bas touche exactement le sol.
 		var height: float = length * 0.5 * sin(angle) - RAMP_THICKNESS * 0.5 * cos(angle)
 		var origin: Vector3 = Vector3(position.x + lateral.x, height, position.y + lateral.y)
-		# Le nez de la rampe se releve : rotation autour de l'axe lateral.
-		var basis: Basis = Basis(Vector3.UP, heading) * Basis(Vector3.RIGHT, -angle)
+		# Le nez de la rampe se releve DANS LE SENS DE LA MARCHE. Le signe compte :
+		# inverse, la voiture rencontre une face verticale et s'arrete net au lieu
+		# de decoller.
+		var basis: Basis = Basis(Vector3.UP, heading) * Basis(Vector3.RIGHT, angle)
 		var transform: Transform3D = Transform3D(basis, origin)
 
 		var shape: CollisionShape3D = CollisionShape3D.new()

@@ -19,11 +19,14 @@ const CAMERA_SCRIPT: String = "res://src/camera/chase_camera.gd"
 var _args: CliArgs = null
 var _world: RaceWorld = null
 var _camera: ChaseCamera = null
+var _diagnostics: Diagnostics = null
 
 
 func _ready() -> void:
 	_args = CliArgs.parse()
 	print("[lancement] %s" % _args.describe())
+	Net.lag.round_trip_ms = _args.lag_ms
+	Net.lag.jitter_ms = _args.jitter_ms
 
 	_menu.host_requested.connect(_on_host_requested)
 	_menu.join_requested.connect(_on_join_requested)
@@ -109,8 +112,6 @@ func _start_solo(player_name: String) -> void:
 func _create_world() -> void:
 	_world = RaceWorld.new()
 	_world.name = "RaceWorld"
-	_world.lag.round_trip_ms = _args.lag_ms
-	_world.lag.jitter_ms = _args.jitter_ms
 	_world.local_vehicle_ready.connect(_on_local_vehicle_ready)
 	# Insere avant l'interface pour que la scene 3D soit dessinee dessous.
 	add_child(_world)
@@ -119,6 +120,13 @@ func _create_world() -> void:
 	if _args.lag_ms > 0.0:
 		print("[reseau] latence simulee : %.0f ms aller-retour (gigue %.0f ms)"
 			% [_args.lag_ms, _args.jitter_ms])
+	if _args.autopilot:
+		print("[essai] pilote automatique actif")
+	if _args.diagnostics:
+		_diagnostics = Diagnostics.new()
+		_diagnostics.name = "Diagnostics"
+		_diagnostics.setup(_world)
+		add_child(_diagnostics)
 
 
 func _enter_race() -> void:

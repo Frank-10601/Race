@@ -42,8 +42,8 @@ func _build_report() -> String:
 	lines.append("Transport        %s" % (Net.transport.get_transport_name() if Net.transport != null else "aucun"))
 	lines.append("Joueurs          %d / %d" % [maxi(Net.player_count(), _world.vehicle_count()), Tuning.max_players])
 	lines.append("Ping             %.0f ms" % Net.clock.ping_ms)
-	if _world.lag.is_active():
-		lines.append("Latence simulee  %.0f ms (gigue %.0f)" % [_world.lag.round_trip_ms, _world.lag.jitter_ms])
+	if Net.lag.is_active():
+		lines.append("Latence simulee  %.0f ms (gigue %.0f)" % [Net.lag.round_trip_ms, Net.lag.jitter_ms])
 
 	var vehicle: Vehicle = _world.local_vehicle
 	if vehicle == null or not is_instance_valid(vehicle):

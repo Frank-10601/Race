@@ -20,10 +20,10 @@ signal respawned(reason: String)
 
 enum Mode { AUTHORITY, PREDICTED, INTERPOLATED }
 
-## Couche du vehicule. Il ne percute QUE le decor : les collisions entre
-## joueurs sont hors perimetre de la phase 0 (elles arrivent en phase 5).
+## Couche du vehicule. Il ne percute QUE LES MURS : le sol est gere par les
+## rayons de `VehiclePhysics`, et les collisions entre joueurs sont hors
+## perimetre de la phase 0 (elles arrivent en phase 5).
 const LAYER_VEHICLE: int = 2
-const MASK_WORLD: int = 1
 
 ## Nombre d'entrees renvoyees a chaque paquet, pour rattraper une perte.
 const INPUT_REDUNDANCY: int = 3
@@ -53,7 +53,7 @@ var _sequence: int = 0
 
 func _ready() -> void:
 	collision_layer = LAYER_VEHICLE
-	collision_mask = MASK_WORLD
+	collision_mask = VehiclePhysics.LAYER_WALL
 	# Le corps ne sert qu'aux collisions : le rendu vit dans `VehicleVisuals`,
 	# qui est en `top_level` pour pouvoir absorber les corrections reseau.
 	var shape: CollisionShape3D = CollisionShape3D.new()

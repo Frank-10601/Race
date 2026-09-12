@@ -6,8 +6,11 @@ extends RefCounted
 ## Pourquoi dans le jeu plutot qu'avec `tc netem` : cela fonctionne partout, y
 ## compris dans un navigateur et sous Windows, et cela n'exige aucun privilege.
 ##
-## Le retard est applique A LA RECEPTION, des deux cotes. Un reglage de 150 ms
-## produit donc bien 150 ms d'aller-retour : 75 ms a l'aller, 75 ms au retour.
+## Chaque instance retarde ses propres EMISSIONS et RECEPTIONS de la moitie du
+## trajet. Regler `--lag 150` sur le seul client donne donc bien 150 ms
+## d'aller-retour (75 ms a l'emission, 75 ms a la reception), sans avoir a
+## configurer le serveur. Si les deux cotes sont regles, les retards se
+## cumulent, ce qui reste previsible.
 ##
 ## Activation : `--lag 150` en ligne de commande. Desactive, cette classe
 ## n'introduit aucun cout : les messages sont traites immediatement.
@@ -27,7 +30,8 @@ func is_active() -> bool:
 	return round_trip_ms > 0.0
 
 
-## Traite le message maintenant, ou le met en attente si la simulation est active.
+## Traite le message maintenant, ou le retarde d'une demi-traversee si la
+## simulation est active. A utiliser aussi bien a l'emission qu'a la reception.
 func deliver(callback: Callable, arguments: Array) -> void:
 	if not is_active():
 		callback.callv(arguments)

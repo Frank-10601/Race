@@ -30,6 +30,10 @@ const PING_INTERVAL: float = 1.0
 var mode: Mode = Mode.OFFLINE
 var transport: NetworkTransport = null
 var clock: NetClock = NetClock.new()
+## Latence simulee (option `--lag`). Applique a TOUS les messages reseau, y
+## compris la mesure du ping : sinon le panneau F3 afficherait un ping local
+## alors que le jeu se comporte comme sur une connexion lente.
+var lag: LagSimulator = LagSimulator.new()
 
 ## peer_id -> { "name": String, "color_index": int }
 var players: Dictionary = {}
@@ -50,13 +54,14 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	lag.process(delta)
 	if mode != Mode.CLIENT or not is_connected_to_server():
 		return
 	_ping_timer -= delta
 	if _ping_timer <= 0.0:
 		_ping_timer = PING_INTERVAL
 		_ping_sent_at = Time.get_ticks_msec()
-		_request_pong.rpc_id(SERVER_PEER_ID)
+		lag.deliver(_ask_pong, [])
 
 
 # --- Ouverture / fermeture ---------------------------------------------------
@@ -254,13 +259,25 @@ func _reject(reason: String) -> void:
 
 # --- Mesure du ping ----------------------------------------------------------
 
+func _ask_pong() -> void:
+	_request_pong.rpc_id(SERVER_PEER_ID)
+
+
 @rpc("any_peer", "call_remote", "unreliable")
 func _request_pong() -> void:
 	if not is_server():
 		return
-	_send_pong.rpc_id(multiplayer.get_remote_sender_id())
+	lag.deliver(_reply_pong, [multiplayer.get_remote_sender_id()])
+
+
+func _reply_pong(peer_id: int) -> void:
+	_send_pong.rpc_id(peer_id)
 
 
 @rpc("authority", "call_remote", "unreliable")
 func _send_pong() -> void:
+	lag.deliver(_apply_pong, [])
+
+
+func _apply_pong() -> void:
 	clock.record_ping(float(Time.get_ticks_msec()) - _ping_sent_at)

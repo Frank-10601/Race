@@ -1,11 +1,11 @@
-extends SceneTree
+extends Node
 ## Verifie la geometrie produite par TrackPlan.
-## Lancer : godot --headless --script res://tools/tests/test_track_plan.gd
+## Lancer : godot --headless res://tools/tests/test_track_plan.tscn
 
 var _failures: int = 0
 
 
-func _init() -> void:
+func _ready() -> void:
 	_test_straight()
 	_test_right_turn()
 	_test_left_turn()
@@ -13,7 +13,7 @@ func _init() -> void:
 		print("TrackPlan : tous les tests passent.")
 	else:
 		printerr("TrackPlan : %d test(s) en echec." % _failures)
-	quit(1 if _failures > 0 else 0)
+	get_tree().quit(1 if _failures > 0 else 0)
 
 
 func _test_straight() -> void:

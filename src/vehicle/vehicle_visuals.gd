@@ -161,7 +161,9 @@ func _update_wheels(state: VehicleState, delta: float) -> void:
 
 	# Le braquage visuel suit le braquage simule, avec un leger retard qui rend
 	# le mouvement plus naturel que de recopier la valeur brute.
-	var steer_target: float = state.steer_smoothed * Tuning.steer_visual_angle_rad
+	# Meme inversion que pour le lacet : braquer a droite fait tourner les roues
+	# vers la droite, donc dans le sens negatif du repere de Godot.
+	var steer_target: float = -state.steer_smoothed * Tuning.steer_visual_angle_rad
 	_steer_visual = lerpf(_steer_visual, steer_target, 1.0 - exp(-14.0 * delta))
 
 	for index: int in _wheels.size():

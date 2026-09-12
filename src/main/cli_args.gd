@@ -17,6 +17,9 @@ var player_name: String = ""
 var lag_ms: float = 0.0
 var jitter_ms: float = 0.0
 var max_players: int = 0          ## 0 = valeur de tuning.cfg
+## Options d'essai, sans effet sur le jeu normal.
+var autopilot: bool = false
+var diagnostics: bool = false
 
 
 static func parse() -> CliArgs:
@@ -46,6 +49,10 @@ func _parse_command_line() -> void:
 				launch = Launch.HOST
 			"--solo":
 				launch = Launch.SOLO
+			"--autopilot":
+				autopilot = true
+			"--diagnostics":
+				diagnostics = true
 			"--join":
 				launch = Launch.CLIENT
 				if not value.is_empty():
@@ -89,6 +96,10 @@ func _parse_url() -> void:
 				address = value
 			"solo":
 				launch = Launch.SOLO
+			"autopilot":
+				autopilot = value != "0"
+			"diagnostics":
+				diagnostics = value != "0"
 			"port":
 				port = int(value)
 			"transport":
@@ -110,6 +121,7 @@ func _apply_defaults() -> void:
 		Tuning.max_players = max_players
 	if player_name.is_empty():
 		player_name = "Joueur"
+	PlayerInput.autopilot = autopilot
 
 
 func describe() -> String:
