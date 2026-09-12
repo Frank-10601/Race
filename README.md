@@ -37,11 +37,18 @@ godot --path . -- --join 127.0.0.1 --port 8910 --name Kim
 
 ### Version web
 
+Le jeu se construit et se publie **tout seul a chaque `git push`**, via GitHub
+Actions. Lien une fois Pages active : https://frank-10601.github.io/Race/
+
+Deux reglages sont a faire une seule fois sur GitHub : voir **`docs/PUBLIER.md`**.
+
+Pour construire en local :
+
 ```bash
 tools/build_web.sh --serve      # construit puis sert sur http://localhost:8060
 ```
 
-Pour heberger et partager un lien : `docs/HOSTING.md`.
+Pour heberger ailleurs (itch.io, VPS) et comprendre `wss` : `docs/HOSTING.md`.
 
 ---
 

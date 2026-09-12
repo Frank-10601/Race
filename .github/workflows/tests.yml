@@ -16,9 +16,10 @@ jobs:
   tests:
     name: Geometrie du trace et physique du vehicule
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Recuperer le depot
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Installer Godot
         run: |

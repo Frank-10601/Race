@@ -30,9 +30,12 @@ jobs:
   build:
     name: Exporter le jeu
     runs-on: ubuntu-latest
+    # Filet de securite : sans cela, un telechargement bloque consommerait des
+    # heures de quota sans rien produire.
+    timeout-minutes: 25
     steps:
       - name: Recuperer le depot
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Installer Godot et ses modeles d'exportation
         run: |
@@ -67,11 +70,42 @@ jobs:
           touch build/web/.nojekyll
           ls -la build/web
 
-      - name: Configurer Pages
-        uses: actions/configure-pages@v5
+      # Le jeu est aussi telechargeable depuis l'onglet Actions, meme si la
+      # publication sur Pages echoue. Pratique pour l'essayer tout de suite, ou
+      # pour deposer l'archive sur itch.io.
+      - name: Mettre le jeu a disposition en telechargement
+        uses: actions/upload-artifact@v4
         with:
-          # Active GitHub Pages sur le depot s'il ne l'est pas encore.
-          enablement: true
+          name: race-web
+          path: build/web
+          retention-days: 30
+
+      # GitHub Pages doit avoir ete active UNE FOIS a la main sur le depot :
+      #   Settings > Pages > Source : GitHub Actions
+      # Le jeton d'un workflow n'a pas le droit de creer le site lui-meme
+      # (« Resource not accessible by integration »), d'ou l'absence de
+      # l'option `enablement` ici.
+      - name: Configurer Pages
+        id: pages
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+
+      - name: Expliquer comment activer Pages
+        if: steps.pages.outcome == 'failure'
+        run: |
+          echo "::error::GitHub Pages n'est pas active sur ce depot."
+          echo "A faire une seule fois :"
+          echo "  1. Settings > Pages"
+          echo "  2. Source : GitHub Actions"
+          echo "  3. Relancer ce workflow (onglet Actions > Publier la version web > Run workflow)"
+          echo ""
+          echo "Depot prive : GitHub Pages y demande un abonnement GitHub Pro."
+          echo "Sur un compte gratuit, rendre le depot public d'abord :"
+          echo "  Settings > General > Danger Zone > Change visibility."
+          echo ""
+          echo "En attendant, le jeu est telechargeable sur cette page,"
+          echo "section « Artifacts » : race-web."
+          exit 1
 
       - name: Preparer la publication
         uses: actions/upload-pages-artifact@v3
@@ -82,6 +116,7 @@ jobs:
     name: Publier
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
