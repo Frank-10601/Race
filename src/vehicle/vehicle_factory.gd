@@ -13,16 +13,25 @@ extends RefCounted
 
 ## Geometrie des roues, partagee avec l'animation visuelle.
 const WHEEL_RADIUS: float = 0.38
-const WHEEL_WIDTH: float = 0.30
+const WHEEL_WIDTH: float = 0.32
 
 ## Emplacement des roues, en coordonnees locales, dans l'ordre
 ## avant-gauche, avant-droite, arriere-gauche, arriere-droite.
+##
+## L'ecartement (0,90 m) depasse volontairement la demi-largeur de la
+## carrosserie visible : sinon les roues disparaissent dans la caisse et la
+## voiture n'est plus qu'une boite qui glisse.
 const WHEEL_POSITIONS: Array[Vector3] = [
-	Vector3(-0.82, 0.0, -1.42),
-	Vector3(0.82, 0.0, -1.42),
-	Vector3(-0.82, 0.0, 1.42),
-	Vector3(0.82, 0.0, 1.42),
+	Vector3(-0.90, 0.0, -1.42),
+	Vector3(0.90, 0.0, -1.42),
+	Vector3(-0.90, 0.0, 1.42),
+	Vector3(0.90, 0.0, 1.42),
 ]
+
+## Carrosserie visible. Plus etroite et plus haute que la boite de collision :
+## elle laisse voir les roues et degage le bas de caisse.
+const BODY_SIZE: Vector3 = Vector3(1.62, 0.58, 4.05)
+const BODY_HEIGHT_OFFSET: float = 0.17
 
 ## Les deux premieres roues braquent.
 const STEERING_WHEEL_COUNT: int = 2
@@ -55,19 +64,54 @@ static func create_body(color: Color) -> Node3D:
 	var chassis: MeshInstance3D = MeshInstance3D.new()
 	chassis.name = "Chassis"
 	var chassis_mesh: BoxMesh = BoxMesh.new()
-	chassis_mesh.size = VehiclePhysics.CHASSIS_SIZE
+	chassis_mesh.size = BODY_SIZE
 	chassis.mesh = chassis_mesh
 	chassis.material_override = paint
+	chassis.position = Vector3(0.0, BODY_HEIGHT_OFFSET, 0.0)
 	root.add_child(chassis)
 
 	var roof: MeshInstance3D = MeshInstance3D.new()
 	roof.name = "Roof"
 	var roof_mesh: BoxMesh = BoxMesh.new()
-	roof_mesh.size = Vector3(1.55, 0.55, 1.90)
+	roof_mesh.size = Vector3(1.42, 0.52, 1.85)
 	roof.mesh = roof_mesh
 	roof.material_override = paint
-	roof.position = Vector3(0.0, VehiclePhysics.CHASSIS_SIZE.y * 0.5 + 0.24, 0.18)
+	roof.position = Vector3(0.0, BODY_HEIGHT_OFFSET + BODY_SIZE.y * 0.5 + 0.22, 0.20)
 	root.add_child(roof)
+
+	# Pare-chocs sombres : sans eux, la voiture n'est qu'un bloc de couleur unie
+	# dont on ne distingue pas l'avant de l'arriere.
+	var trim: StandardMaterial3D = StandardMaterial3D.new()
+	trim.albedo_color = Color(0.13, 0.13, 0.15)
+	trim.roughness = 0.8
+	for side: int in 2:
+		var bumper: MeshInstance3D = MeshInstance3D.new()
+		bumper.name = "Bumper%d" % side
+		var bumper_mesh: BoxMesh = BoxMesh.new()
+		bumper_mesh.size = Vector3(BODY_SIZE.x + 0.10, 0.26, 0.22)
+		bumper.mesh = bumper_mesh
+		bumper.material_override = trim
+		var z: float = -BODY_SIZE.z * 0.5 if side == 0 else BODY_SIZE.z * 0.5
+		bumper.position = Vector3(0.0, BODY_HEIGHT_OFFSET - 0.12, z)
+		root.add_child(bumper)
+
+	# Deux phares clairs a l'avant : reperer le sens de la voiture d'un coup
+	# d'oeil compte plus que le detail, surtout de loin.
+	var light_material: StandardMaterial3D = StandardMaterial3D.new()
+	light_material.albedo_color = Color(0.97, 0.95, 0.80)
+	light_material.emission_enabled = true
+	light_material.emission = Color(0.9, 0.88, 0.7)
+	light_material.emission_energy_multiplier = 0.6
+	for side: int in 2:
+		var light: MeshInstance3D = MeshInstance3D.new()
+		light.name = "Headlight%d" % side
+		var light_mesh: BoxMesh = BoxMesh.new()
+		light_mesh.size = Vector3(0.34, 0.16, 0.12)
+		light.mesh = light_mesh
+		light.material_override = light_material
+		var x: float = -0.52 if side == 0 else 0.52
+		light.position = Vector3(x, BODY_HEIGHT_OFFSET + 0.06, -BODY_SIZE.z * 0.5)
+		root.add_child(light)
 
 	var glass_material: StandardMaterial3D = StandardMaterial3D.new()
 	glass_material.albedo_color = Color(0.10, 0.13, 0.17)
@@ -77,10 +121,10 @@ static func create_body(color: Color) -> Node3D:
 	var windshield: MeshInstance3D = MeshInstance3D.new()
 	windshield.name = "Windshield"
 	var glass_mesh: BoxMesh = BoxMesh.new()
-	glass_mesh.size = Vector3(1.45, 0.42, 0.16)
+	glass_mesh.size = Vector3(1.34, 0.40, 0.16)
 	windshield.mesh = glass_mesh
 	windshield.material_override = glass_material
-	windshield.position = Vector3(0.0, VehiclePhysics.CHASSIS_SIZE.y * 0.5 + 0.26, -0.72)
+	windshield.position = Vector3(0.0, BODY_HEIGHT_OFFSET + BODY_SIZE.y * 0.5 + 0.24, -0.70)
 	root.add_child(windshield)
 
 	return root
@@ -143,6 +187,9 @@ static func create_name_tag(player_name: String) -> Label3D:
 	label.position = Vector3(0.0, 1.85, 0.0)
 	# Ne gene pas la lisibilite quand deux voitures se superposent.
 	label.alpha_cut = Label3D.ALPHA_CUT_DISCARD
+	# Une etiquette de texte ne doit pas projeter d'ombre : en billboard, elle
+	# pivote avec la camera et son ombre se promene sur la piste.
+	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return label
 
 

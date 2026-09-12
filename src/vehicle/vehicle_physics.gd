@@ -20,8 +20,10 @@ extends RefCounted
 ## Ce n'est pas une simulation : c'est un modele concu pour etre agreable et
 ## reglable. Chaque reglage de `tuning.cfg` correspond a une sensation.
 
-## Dimensions du chassis, partagees avec la forme de collision et le visuel.
-const CHASSIS_SIZE: Vector3 = Vector3(1.85, 0.80, 4.10)
+## Boite de collision, centree sur la position simulee. Volontairement un peu
+## plus large que la carrosserie visible pour que les chocs contre les murs se
+## produisent avant que la peinture ne les traverse a l'ecran.
+const CHASSIS_SIZE: Vector3 = Vector3(1.80, 0.90, 4.15)
 
 ## Points de sondage du sol, en coordonnees locales (les quatre coins).
 const PROBE_OFFSETS: Array[Vector3] = [

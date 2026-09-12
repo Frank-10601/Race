@@ -54,14 +54,14 @@ var fall_height: float = -25.0
 var spawn_height: float = 1.0
 
 # --- [camera] ----------------------------------------------------------------
-var chase_distance: float = 7.5
-var chase_height: float = 3.0
+var chase_distance: float = 6.8
+var chase_height: float = 2.5
 var follow_speed: float = 9.0
 var look_speed: float = 11.0
 var speed_pullback: float = 2.5
 var corner_tilt: float = 4.0
-var base_fov: float = 72.0
-var speed_fov_gain: float = 16.0
+var base_fov: float = 68.0
+var speed_fov_gain: float = 14.0
 var close_distance: float = 4.5
 var close_height: float = 1.9
 var hood_forward: float = 0.35

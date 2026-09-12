@@ -124,7 +124,12 @@ func _build_environment() -> void:
 	sun.light_energy = 1.15
 	sun.light_color = Color(1.0, 0.97, 0.90)
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 180.0
+	# Portee volontairement courte : une carte d'ombres etalee sur 180 m perdait
+	# tellement en precision que l'ombre se detachait visiblement du vehicule.
+	# Une portee reduite ameliore aussi les performances dans le navigateur.
+	sun.directional_shadow_max_distance = 95.0
+	sun.shadow_bias = 0.03
+	sun.shadow_normal_bias = 1.2
 	add_child(sun)
 
 	var sky_material: ProceduralSkyMaterial = ProceduralSkyMaterial.new()

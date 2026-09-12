@@ -104,7 +104,11 @@ func _start_solo(player_name: String) -> void:
 	Net.local_player_name = player_name
 	_create_world()
 	_world.create_solo_vehicle(player_name)
+	if _args.benchmark_vehicles > 1:
+		_world.create_filler_vehicles(_args.benchmark_vehicles - 1)
 	_enter_race()
+	if _args.benchmark_seconds > 0.0:
+		_start_benchmark()
 
 
 # --- Assemblage --------------------------------------------------------------
@@ -153,6 +157,29 @@ func _on_local_vehicle_ready(vehicle: Vehicle) -> void:
 
 func _on_vehicle_respawned(reason: String) -> void:
 	_hud.call("show_notice", "Remise en piste : %s" % reason)
+
+
+## Mesure de performance : on laisse tourner, puis on imprime les moyennes et on
+## quitte. Les memes chiffres sont ainsi comparables entre bureau et navigateur.
+func _start_benchmark() -> void:
+	print("[mesure] %d vehicule(s) simule(s) pendant %.0f s"
+		% [_args.benchmark_vehicles, _args.benchmark_seconds])
+
+	# Cout d'un pas de simulation, isole du rendu : c'est le seul chiffre
+	# reellement comparable entre la version bureau et la version web.
+	var step_benchmark: StepBenchmark = StepBenchmark.new()
+	step_benchmark.name = "StepBenchmark"
+	add_child(step_benchmark)
+	if _world.local_vehicle != null:
+		step_benchmark.measure(_world.local_vehicle)
+
+	var timer: SceneTreeTimer = get_tree().create_timer(_args.benchmark_seconds)
+	timer.timeout.connect(func() -> void:
+		var report: String = _diagnostics.report_averages() if _diagnostics != null \
+			else "activer --diagnostics pour obtenir les moyennes"
+		print("[mesure] %s" % report)
+		print("[mesure] terminee")
+		get_tree().quit())
 
 
 # --- Retours du reseau -------------------------------------------------------

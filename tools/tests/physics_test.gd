@@ -52,6 +52,7 @@ func _run_all() -> void:
 	_test_determinism()
 	_test_ramps()
 	_test_walls()
+	_test_respawn()
 
 	print("-----------------------------------")
 	if _failures == 0:
@@ -253,7 +254,73 @@ func _test_walls() -> void:
 		_fail("la voiture traverse le mur : %.1f m parcourus" % travelled)
 
 
+## La remise en piste doit se declencher dans les quatre cas prevus, et
+## seulement dans ceux-la : a l'arret SUR la piste, on laisse le joueur
+## tranquille.
+func _test_respawn() -> void:
+	var detector: VehicleRespawn = VehicleRespawn.new()
+	var neutral: InputFrame = InputFrame.create(0, 0.0, 0.0, 0.0, false, false)
+	var step: float = Tuning.physics_delta
+
+	# 1. Demande du joueur : immediate.
+	var manual: InputFrame = InputFrame.create(0, 0.0, 0.0, 0.0, false, true)
+	if not detector.should_respawn(_resting_state(), manual, _track, step):
+		_fail("la touche de remise en piste ne fait rien")
+
+	# 2. Chute hors de la piste : immediate.
+	detector.reset()
+	var fallen: VehicleState = _resting_state()
+	fallen.position.y = Tuning.fall_height - 5.0
+	if not detector.should_respawn(fallen, neutral, _track, step):
+		_fail("une voiture tombee sous la piste n'est pas remise en jeu")
+
+	# 3. Vehicule retourne : apres `stuck_time`, pas avant.
+	detector.reset()
+	var flipped: VehicleState = _resting_state()
+	flipped.up = Vector3.DOWN
+	if detector.should_respawn(flipped, neutral, _track, step):
+		_fail("une voiture retournee est remise en piste immediatement, sans delai")
+	var flipped_after: bool = false
+	for _index: int in int(Tuning.stuck_time / step) + 4:
+		if detector.should_respawn(flipped, neutral, _track, step):
+			flipped_after = true
+			break
+	if not flipped_after:
+		_fail("une voiture retournee n'est jamais remise en piste")
+
+	# 4. A l'arret SUR la piste : on ne touche a rien.
+	detector.reset()
+	var parked: VehicleState = _resting_state()
+	var disturbed: bool = false
+	for _index: int in int(Tuning.stuck_time / step) * 2:
+		if detector.should_respawn(parked, neutral, _track, step):
+			disturbed = true
+			break
+	if disturbed:
+		_fail("une voiture a l'arret sur la piste est remise en piste a tort")
+
+	# 5. A l'arret HORS piste : remise en jeu apres le delai.
+	detector.reset()
+	var stranded: VehicleState = _resting_state()
+	stranded.position = TEST_AREA + Vector3.UP * Tuning.ride_height
+	var rescued: bool = false
+	for _index: int in int(Tuning.stuck_time / step) * 2:
+		if detector.should_respawn(stranded, neutral, _track, step):
+			rescued = true
+			break
+	if not rescued:
+		_fail("une voiture immobilisee hors piste n'est jamais remise en jeu")
+
+	print("  remise en piste : les cinq situations se comportent comme prevu")
+
+
 # --- Utilitaires -------------------------------------------------------------
+
+## Voiture a l'arret sur la grille de depart.
+func _resting_state() -> VehicleState:
+	var state: VehicleState = _fresh_state()
+	return _run(state, _make_input(0.0, 0.0, 0.0, false), 40)
+
 
 func _fresh_state() -> VehicleState:
 	var transform: Transform3D = _track.call("get_spawn_transform", 0)

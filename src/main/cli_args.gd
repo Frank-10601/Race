@@ -20,6 +20,11 @@ var max_players: int = 0          ## 0 = valeur de tuning.cfg
 ## Options d'essai, sans effet sur le jeu normal.
 var autopilot: bool = false
 var diagnostics: bool = false
+## Duree apres laquelle le jeu s'arrete en affichant ses moyennes (0 = jamais).
+## Sert aux mesures de performance comparees bureau / navigateur.
+var benchmark_seconds: float = 0.0
+## Nombre de vehicules simules pour la mesure.
+var benchmark_vehicles: int = 1
 
 
 static func parse() -> CliArgs:
@@ -51,6 +56,14 @@ func _parse_command_line() -> void:
 				launch = Launch.SOLO
 			"--autopilot":
 				autopilot = true
+			"--benchmark":
+				benchmark_seconds = float(value)
+				launch = Launch.SOLO
+				autopilot = true
+				index += 1
+			"--benchmark-vehicles":
+				benchmark_vehicles = maxi(1, int(value))
+				index += 1
 			"--diagnostics":
 				diagnostics = true
 			"--join":
@@ -98,6 +111,12 @@ func _parse_url() -> void:
 				launch = Launch.SOLO
 			"autopilot":
 				autopilot = value != "0"
+			"benchmark":
+				benchmark_seconds = float(value)
+				launch = Launch.SOLO
+				autopilot = true
+			"benchmark_vehicles":
+				benchmark_vehicles = maxi(1, int(value))
 			"diagnostics":
 				diagnostics = value != "0"
 			"port":

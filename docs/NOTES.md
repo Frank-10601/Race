@@ -108,4 +108,52 @@ propre gravite, lue dans `tuning.cfg`. Une seule source de verite. Si un
 
 ## Mesures de performance web vs bureau
 
-_(a remplir a la fin de la phase 0)_
+Relevees a la fin de la phase 0, avec `--benchmark`. La mesure qui compte est le
+**cout d'un pas de simulation**, isole du rendu : les compteurs de Godot donnent
+un temps par IMAGE, ce qui ne se compare pas entre deux plateformes qui n'ont pas
+le meme nombre d'images par seconde.
+
+| | Bureau (Linux, natif) | Navigateur (WebAssembly) | Ecart |
+|---|---|---|---|
+| Un pas de simulation, par vehicule | **40,0 us** | **124,2 us** | **3,1x** |
+| Budget a 60 Hz, 1 vehicule | 0,2 % | 0,7 % | |
+| Budget a 60 Hz, 12 vehicules | 2,9 % | 8,9 % | |
+
+**Lecture.** Le facteur 3 correspond a ce qu'on attend de WebAssembly compare au
+natif. L'important est ailleurs : meme trois fois plus lente, la physique ne
+consomme que **9 % du budget d'un navigateur pour douze voitures**. La marge est
+large, et elle serait encore plus confortable en pratique — un client ne simule
+que SA voiture, les onze autres sont interpolees, ce qui coute bien moins cher.
+
+Le choix d'une physique personnalisee plutot que `VehicleBody3D` y est pour
+beaucoup : quatre rayons et de l'algebre vectorielle, la ou un vehicule a
+suspension aurait demande un solveur complet par voiture.
+
+### Ce que ces mesures ne disent pas
+
+Le banc a tourne dans un conteneur **sans carte graphique**, ou Chromium rend en
+logiciel (SwiftShader). Le temps de rendu releve — plus de 600 ms par image —
+ne veut donc rien dire, et le nombre d'images par seconde non plus. Seul le cout
+de la physique est exploitable, parce qu'il ne depend pas du rendu.
+
+**A verifier sur une vraie machine**, avant de considerer la phase 0 close :
+- le nombre d'images par seconde reel dans le navigateur, avec les ombres ;
+- le comportement en plein ecran a 1920x1080 ;
+- le cout des ombres directionnelles en `gl_compatibility` (leur portee a deja
+  ete ramenee a 95 m, ce qui les rend plus nettes et moins couteuses) ;
+- la difference entre Chrome et Firefox, dont les moteurs WebAssembly different.
+
+### Poids de l'export web
+
+| Fichier | Taille |
+|---|---|
+| `index.wasm` | 38 Mo |
+| `index.js` | 276 ko |
+| `index.pck` (le jeu lui-meme) | 132 ko |
+| **Total** | **39 Mo** |
+
+Le moteur represente la quasi-totalite du poids ; le jeu pese 132 ko. Ce total
+descendrait nettement avec un export optimise (`--disable-3d` est exclu ici, mais
+retirer les modules inutilises est possible en recompilant les modeles d'export).
+A regarder seulement si le temps de chargement devient genant : le fichier est
+compresse a la volee par la plupart des hebergeurs.

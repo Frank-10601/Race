@@ -94,6 +94,10 @@ func _server_tick(delta: float) -> void:
 		if vehicle.mode == Vehicle.Mode.AUTHORITY and peer_id == Net.local_peer_id():
 			# Hote ou jeu solo : le joueur local fournit ses entrees directement.
 			input = PlayerInput.sample(vehicle.next_sequence())
+		elif not Net.is_online():
+			# Hors reseau : les vehicules de mesure roulent tout seuls, decales
+			# les uns des autres pour ne pas se superposer.
+			input = PlayerInput.sample(vehicle.next_sequence() + peer_id * 37)
 		else:
 			input = _consume_input(peer_id)
 		vehicle.simulate(input, delta)
@@ -292,6 +296,19 @@ func create_solo_vehicle(player_name: String) -> void:
 		"slot": 0,
 	})
 	_vehicle_container.add_child(vehicle)
+
+
+## Vehicules supplementaires simules mais non pilotes, pour mesurer le cout de
+## la physique a plusieurs voitures (option `--benchmark-vehicles`).
+func create_filler_vehicles(count: int) -> void:
+	for slot: int in range(1, count + 1):
+		var vehicle: Vehicle = _spawn_vehicle({
+			"peer_id": 1000 + slot,
+			"name": "Mesure %d" % slot,
+			"color_index": slot,
+			"slot": slot,
+		})
+		_vehicle_container.add_child(vehicle)
 
 
 ## Construit le vehicule. Execute sur le serveur ET sur chaque client, par
