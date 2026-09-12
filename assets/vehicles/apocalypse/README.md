@@ -2,40 +2,55 @@
 
 Voiture post-apocalyptique, generee avec Tripo.
 
-| | |
-|---|---|
-| Source | `assets/raw/vehicles/post apocalyptic car 3d model.glb` (21,5 Mo) |
-| Modele prepare | `apocalypse.glb` (1,2 Mo) |
-| Dimensions | 1,87 x 1,65 x 4,20 m |
-| Triangles | 26 664 (683 000 a l'origine) |
+| | Brut | Dans le jeu |
+|---|---|---|
+| Poids | 21,5 Mo | **1,4 Mo** |
+| Triangles | 683 000 | **34 172** |
+| Longueur | 0,98 m | **4,20 m** |
+| Avant | vers -X | **vers -Z** |
+| Roues | noyees dans le maillage | **quatre objets animes** |
 
 ## Traitement applique
 
 ```bash
-# 1. Simplification : 683 000 -> 26 664 triangles
-gltf-transform simplify brut.glb etape1.glb --ratio 0.035 --error 0.005
-# 2. Textures ramenees a 1024 px
-gltf-transform resize etape1.glb etape2.glb --width 1024 --height 1024
-# 3. Doublons et donnees inutilisees
-gltf-transform dedup etape2.glb etape3.glb && gltf-transform prune etape3.glb propre.glb
-# 4. Echelle, orientation, origine, noeud Body
+# 1. Separation des roues, sur le modele BRUT : la simplification soude des
+#    sommets et rendrait la decoupe moins nette.
+tools/split_wheels.py brut.glb separe.glb --forward=-X
+
+# 2. Allegement : 683 000 -> 34 000 triangles, textures a 1024 px
+gltf-transform simplify separe.glb e1.glb --ratio 0.04 --error 0.004
+gltf-transform resize e1.glb e2.glb --width 1024 --height 1024
+gltf-transform dedup e2.glb e3.glb && gltf-transform prune e3.glb propre.glb
+
+# 3. Echelle, orientation, origine au sol, pivots de roues
 tools/prepare_vehicle.py propre.glb apocalypse.glb --forward=-X
 ```
 
-Le modele brut mesurait 0,98 m et pointait vers -X. Il a ete agrandi d'un
-facteur 4,279 et pivote de -90 degres.
+L'ordre compte : separer AVANT de simplifier.
 
-## Limite connue : les roues ne tournent pas
+## Structure obtenue
 
-Tripo a decoupe le modele en huit morceaux suivant son atlas de textures
-(`tripo_part_0` a `tripo_part_7`), et non par piece mecanique : carrosserie et
-roues appartiennent aux memes maillages.
+```
+Body                    carrosserie, orientee et mise a l'echelle
+WheelFL, WheelFR        pivots avant  — tournent et braquent
+WheelRL, WheelRR        pivots arriere — tournent seulement
+```
 
-Consequence : les roues sont bien visibles, mais elles ne peuvent ni tourner ni
-braquer. Rien d'autre n'en souffre — la conduite, le reseau et les collisions
-sont inchanges, puisqu'ils ne dependent que de la boite de collision.
+Chaque pivot est place au centre du moyeu et **sans rotation** : c'est lui que
+le jeu fait tourner. La geometrie orientee est son enfant. Si le pivot portait
+lui-meme la rotation du modele, ses axes ne seraient plus ceux du vehicule et
+la roue tournerait de travers.
 
-Pour les animer, il faudra separer les roues de la carrosserie dans Blender et
-les nommer `WheelFL`, `WheelFR`, `WheelRL`, `WheelRR`, origine au centre du
-moyeu (voir `../README.md`). Le code les prendra alors automatiquement en
-charge : `VehicleFactory.load_model()` les cherche deja.
+## Comment les roues ont ete retrouvees
+
+Tripo avait decoupe le modele en huit morceaux suivant son atlas de textures
+(`tripo_part_0` a `tripo_part_7`), et non par piece mecanique. Quatre de ces
+morceaux contenaient une roue, dont deux la partageaient avec un essieu.
+
+`tools/split_wheels.py` les a isoles par la geometrie : ilots relies par leurs
+aretes, decoupes la ou la matiere se rarefie, puis tries sur leur forme — une
+roue est basse, a peu pres aussi haute que longue, et nettement plus etroite.
+
+Verification automatique : `tools/tests/visuals_test.tscn` mesure que les roues
+tournent avec la vitesse, que seules celles de l'avant braquent, et dans le bon
+sens.

@@ -92,19 +92,62 @@ def main():
 
     scene = gltf.scenes[gltf.scene or 0]
 
-    # Noeud de recentrage, puis noeud `Body` qui porte echelle et rotation.
-    centring = Node(name="_centring", translation=offset, children=list(scene.nodes))
-    gltf.nodes.append(centring)
-    centring_index = len(gltf.nodes) - 1
+    yaw = FORWARD_TO_YAW[arguments.forward]
+    rotation = quaternion_y(yaw)
+    wheel_roots = [index for index in scene.nodes
+                   if (gltf.nodes[index].name or "").startswith("Wheel")]
 
-    body = Node(
-        name=arguments.name,
-        scale=[scale, scale, scale],
-        rotation=quaternion_y(FORWARD_TO_YAW[arguments.forward]),
-        children=[centring_index],
-    )
-    gltf.nodes.append(body)
-    scene.nodes = [len(gltf.nodes) - 1]
+    if not wheel_roots:
+        # Modele d'un seul tenant : un noeud de recentrage, puis un noeud
+        # `Body` qui porte l'echelle et la rotation.
+        centring = Node(name="_centring", translation=offset,
+                        children=list(scene.nodes))
+        gltf.nodes.append(centring)
+        body = Node(name=arguments.name, scale=[scale, scale, scale],
+                    rotation=rotation, children=[len(gltf.nodes) - 1])
+        gltf.nodes.append(body)
+        scene.nodes = [len(gltf.nodes) - 1]
+    else:
+        # Modele dont les roues sont deja separees. Chacune recoit un PIVOT
+        # place a la position de son moyeu et SANS rotation ; la geometrie
+        # orientee vient en dessous de lui.
+        #
+        # C'est ce pivot que le jeu fera tourner. S'il portait lui-meme la
+        # rotation du modele, ses axes locaux ne seraient plus ceux du
+        # vehicule et la roue tournerait de travers.
+        print(f"  roues separees        {len(wheel_roots)}")
+        radians = np.radians(yaw)
+        matrix = np.array([
+            [np.cos(radians), 0.0, np.sin(radians)],
+            [0.0, 1.0, 0.0],
+            [-np.sin(radians), 0.0, np.cos(radians)],
+        ])
+        offset_vector = np.array(offset)
+
+        new_roots = []
+        for index in list(scene.nodes):
+            node = gltf.nodes[index]
+            name = node.name or ""
+            if name.startswith("Wheel"):
+                hub = np.array(node.translation or [0.0, 0.0, 0.0])
+                placed = matrix @ ((hub + offset_vector) * scale)
+                node.name = name + "_geometry"
+                node.translation = None
+                node.rotation = rotation
+                node.scale = [scale, scale, scale]
+                pivot = Node(name=name, translation=placed.tolist(),
+                             children=[index])
+                gltf.nodes.append(pivot)
+                new_roots.append(len(gltf.nodes) - 1)
+            else:
+                centring = Node(name="_centring_" + name, translation=offset,
+                                children=[index])
+                gltf.nodes.append(centring)
+                wrapper = Node(name=name, scale=[scale, scale, scale],
+                               rotation=rotation, children=[len(gltf.nodes) - 1])
+                gltf.nodes.append(wrapper)
+                new_roots.append(len(gltf.nodes) - 1)
+        scene.nodes = new_roots
 
     gltf.save(arguments.destination)
 

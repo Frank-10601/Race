@@ -14,7 +14,7 @@ env:
 
 jobs:
   tests:
-    name: Geometrie du trace et physique du vehicule
+    name: Trace, physique et animation des roues
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

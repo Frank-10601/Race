@@ -38,6 +38,10 @@ var _position_error: Vector3 = Vector3.ZERO
 var _yaw_error: float = 0.0
 
 var _wheel_spin: float = 0.0
+## Rayon des roues effectivement affichees. Un modele importe a rarement le
+## rayon des roues primitives, et s'en servir ferait tourner les roues a une
+## vitesse sans rapport avec le defilement du sol.
+var _wheel_radius: float = VehicleFactory.WHEEL_RADIUS
 var _steer_visual: float = 0.0
 var _roll: float = 0.0
 var _pitch: float = 0.0
@@ -67,39 +71,33 @@ func setup(color: Color, player_name: String, model_path: String = "") -> void:
 		# Roues separees si le modele en fournit ; sinon elles font partie de la
 		# carrosserie et il n'y a rien a animer.
 		_wheels.assign(model["wheels"])
+		_measure_model_wheels()
 
-		var marker: Node3D = VehicleFactory.create_color_marker(color)
-		var top: float = _model_top(root, root.transform)
-		marker.position = Vector3(0.0, (top if is_finite(top) else 0.9) + 0.09, 0.0)
-		add_child(marker)
-
-	for index: int in _wheels.size():
-		_wheels[index].position = VehicleFactory.WHEEL_POSITIONS[index] \
-			+ Vector3(0.0, VehicleFactory.WHEEL_RADIUS - Tuning.ride_height, 0.0)
+	if model.is_empty():
+		# Les roues primitives sont placees par le code ; celles d'un modele
+		# sont deja a leur place et ne doivent surtout pas etre deplacees.
+		for index: int in _wheels.size():
+			_wheels[index].position = VehicleFactory.WHEEL_POSITIONS[index] \
+				+ Vector3(0.0, VehicleFactory.WHEEL_RADIUS - Tuning.ride_height, 0.0)
 
 	_name_tag = VehicleFactory.create_name_tag(player_name)
 	add_child(_name_tag)
 
 
-## Hauteur du toit du modele, dans le repere du vehicule.
-##
-## Les transformations doivent etre CUMULEES le long de la hierarchie : un
-## modele importe empile plusieurs noeuds (echelle, rotation, recentrage) avant
-## d'arriver aux maillages, et ne lire que la transformation locale de chaque
-## maillage donne une hauteur sans rapport avec la realite.
-func _model_top(node: Node3D, accumulated: Transform3D) -> float:
-	var highest: float = -INF
-	for child: Node in node.get_children():
-		var child_3d: Node3D = child as Node3D
-		if child_3d == null:
-			continue
-		var combined: Transform3D = accumulated * child_3d.transform
-		var mesh_instance: MeshInstance3D = child_3d as MeshInstance3D
-		if mesh_instance != null and mesh_instance.mesh != null:
-			var box: AABB = combined * mesh_instance.mesh.get_aabb()
-			highest = maxf(highest, box.position.y + box.size.y)
-		highest = maxf(highest, _model_top(child_3d, combined))
-	return highest
+## Deduit le rayon des roues du modele : le moyeu d'une roue posee au sol se
+## trouve exactement a la hauteur de son rayon.
+func _measure_model_wheels() -> void:
+	if _wheels.is_empty():
+		return
+	var total: float = 0.0
+	for wheel: Node3D in _wheels:
+		total += wheel.position.y
+	_wheel_radius = maxf(total / float(_wheels.size()), 0.05)
+
+
+## Roues actuellement animees. Vide si le modele n'en fournit pas de separees.
+func get_wheels() -> Array[Node3D]:
+	return _wheels
 
 
 func set_player_name(player_name: String) -> void:
@@ -188,7 +186,7 @@ func _update_wheels(state: VehicleState, delta: float) -> void:
 		return
 
 	var forward_speed: float = state.velocity.dot(-state.get_basis().z)
-	_wheel_spin = wrapf(_wheel_spin + forward_speed / VehicleFactory.WHEEL_RADIUS * delta, 0.0, TAU)
+	_wheel_spin = wrapf(_wheel_spin + forward_speed / _wheel_radius * delta, 0.0, TAU)
 
 	# Le braquage visuel suit le braquage simule, avec un leger retard qui rend
 	# le mouvement plus naturel que de recopier la valeur brute.

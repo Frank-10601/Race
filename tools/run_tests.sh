@@ -19,6 +19,7 @@ run() {
 "$GODOT" --headless --path "$PROJECT_DIR" --import >/dev/null 2>&1 || true
 run "Geometrie du trace" res://tools/tests/test_track_plan.tscn
 run "Physique du vehicule" res://tools/tests/physics_test.tscn
+run "Animation des roues" res://tools/tests/visuals_test.tscn
 
 echo
 if [ "$FAILED" -eq 0 ]; then

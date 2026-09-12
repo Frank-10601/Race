@@ -235,28 +235,3 @@ static func load_model(model_path: String) -> Dictionary:
 		wheels.append(wheel)
 
 	return {"root": instance, "body": body, "wheels": wheels}
-
-
-## Repere de couleur pose sur le toit.
-##
-## Un modele importe garde ses propres textures : teinter la carrosserie
-## salirait la peinture sans rendre les joueurs plus reconnaissables. Un repere
-## franc, lui, se lit a distance et de dos — ce qui compte en course.
-static func create_color_marker(color: Color) -> Node3D:
-	var marker: Node3D = Node3D.new()
-	marker.name = "ColorMarker"
-
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.45
-	material.emission_enabled = true
-	material.emission = color
-	material.emission_energy_multiplier = 0.22
-
-	var bar: MeshInstance3D = MeshInstance3D.new()
-	var mesh: BoxMesh = BoxMesh.new()
-	mesh.size = Vector3(1.05, 0.16, 0.34)
-	bar.mesh = mesh
-	bar.material_override = material
-	marker.add_child(bar)
-	return marker
