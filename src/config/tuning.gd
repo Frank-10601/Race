@@ -78,6 +78,7 @@ var reconciliation_position_threshold: float = 0.02
 var reconciliation_rotation_threshold: float = 1.0
 var visual_correction_time: float = 0.12
 var input_history_size: int = 128
+var max_replay_steps: int = 30
 var max_players: int = 12
 var default_port: int = 8910
 var default_transport: String = "websocket"
@@ -152,6 +153,7 @@ const _INT_KEYS: Array = [
 	["max_extrapolation_ms", "network", "max_extrapolation_ms"],
 	["server_input_buffer_ticks", "network", "server_input_buffer_ticks"],
 	["input_history_size", "network", "input_history_size"],
+	["max_replay_steps", "network", "max_replay_steps"],
 	["max_players", "network", "max_players"],
 	["default_port", "network", "default_port"],
 ]
@@ -229,6 +231,7 @@ func _validate() -> void:
 	input_send_rate = clampi(input_send_rate, 10, physics_tick_rate)
 	server_input_buffer_ticks = clampi(server_input_buffer_ticks, 0, 10)
 	input_history_size = clampi(input_history_size, 32, 1024)
+	max_replay_steps = clampi(max_replay_steps, 4, input_history_size)
 	max_players = clampi(max_players, 1, 64)
 	default_port = clampi(default_port, 1024, 65535)
 	max_extrapolation_ms = clampi(max_extrapolation_ms, 0, 1000)

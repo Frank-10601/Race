@@ -67,6 +67,8 @@ func _build_report() -> String:
 		lines.append("Ecart predit     %.3f m" % vehicle.prediction.last_position_error)
 		lines.append("Pas rejoues      %d" % vehicle.prediction.last_replay_count)
 		lines.append("Corrections      %d" % vehicle.prediction.corrections_applied)
+		if vehicle.prediction.overruns > 0:
+			lines.append("Decrochages      %d (machine a la peine)" % vehicle.prediction.overruns)
 	return "\n".join(lines)
 
 

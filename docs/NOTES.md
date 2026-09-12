@@ -56,6 +56,34 @@ propre gravite, lue dans `tuning.cfg`. Une seule source de verite. Si un
   a la connexion puis le lisse ; une derive lente est possible sur une longue
   session. A surveiller en phase 2 (chronometrage).
 
+- **La prediction s'effondre sur un client qui ne tient pas la cadence.**
+  Constate lors des essais : un client tournant a 2-4 images par seconde
+  (navigateur sans acceleration materielle) accuse un ecart permanent de 10 a
+  20 m avec le serveur, et son ping mesure passe de 150 a 800 ms.
+
+  **Ce n'est pas un defaut de l'architecture reseau.** La cause est mecanique :
+  Godot plafonne le rattrapage a `max_physics_steps_per_frame` (8). A 3 images
+  par seconde, le client ne simule donc que 24 pas par seconde la ou le serveur
+  en consomme 60. Il prend un retard qu'il ne peut structurellement pas rattraper.
+  Le meme essai sur un client a 145 images par seconde donne un ecart de 4 mm.
+
+  Le plafond `max_replay_steps` ajoute en phase 0 ne couvre PAS ce cas : il
+  limite le nombre de pas rejoues, or ici le client en rejoue peu — c'est le
+  serveur qui avance plus vite que lui. Il protege un autre cas, reel lui aussi :
+  la latence tres elevee, ou le replay deviendrait demesure.
+
+  Un jeu de course n'est de toute facon pas jouable a 3 images par seconde. Mais
+  le comportement DEGRADE, lui, merite d'etre traite avant un vrai multijoueur :
+  1. detecter qu'un client ne suit pas (ecart persistant au-dela d'un seuil sur
+     plusieurs secondes) et **cesser de predire** : afficher alors l'etat serveur
+     interpole, comme pour les autres voitures. Une voiture en retard se pilote
+     mal, mais une voiture qui derive de 20 m est injouable ;
+  2. le signaler au joueur, plutot que de le laisser croire a un probleme de
+     reseau ;
+  3. cote serveur, ne pas repeter indefiniment la derniere entree d'un client
+     muet : au-dela d'une seconde, relacher les gaz.
+  A traiter en phase 2, quand le classement rendra ces ecarts visibles.
+
 ---
 
 ## Idees pour plus tard

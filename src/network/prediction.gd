@@ -25,6 +25,9 @@ extends RefCounted
 var last_replay_count: int = 0
 var last_position_error: float = 0.0
 var corrections_applied: int = 0
+## Nombre de fois ou le client a decroche au point d'abandonner le replay.
+## Une valeur qui monte en course signale une machine qui ne suit pas.
+var overruns: int = 0
 
 var _size: int = 128
 var _sequences: PackedInt32Array = PackedInt32Array()
@@ -50,7 +53,6 @@ func clear() -> void:
 	_sequences.fill(-1)
 	_newest_sequence = 0
 	last_replay_count = 0
-	last_position_error = 0.0
 
 
 ## Archive une entree et l'etat qu'elle a produit.
@@ -92,6 +94,24 @@ func reconcile(server_state: VehicleState, acked_sequence: int,
 
 	var before_position: Vector3 = current_state.position
 	var before_yaw: float = current_state.yaw
+
+	# Garde-fou : si le client a pris trop de retard sur le serveur, rejouer
+	# devient contre-productif. Le cas se produit quand la machine ne tient plus
+	# la cadence (navigateur sans acceleration materielle, onglet en arriere-plan,
+	# machine chargee) : le client simule moins de pas qu'il n'en emet, l'ecart se
+	# creuse, et il passerait son temps a rejouer des dizaines de pas sans jamais
+	# rattraper — en aggravant la surcharge qui l'a mis dans cet etat.
+	# On accepte alors l'etat serveur tel quel et on repart de zero : une voiture
+	# qui accuse un leger retard vaut mieux qu'une voiture qui derive.
+	var behind: int = _newest_sequence - acked_sequence
+	if behind > Tuning.max_replay_steps:
+		overruns += 1
+		clear()
+		return {
+			"state": server_state.copy(),
+			"moved_from": before_position,
+			"yaw_from": before_yaw,
+		}
 
 	# Replay : on repart du serveur et on rejoue tout ce qu'il n'a pas encore vu.
 	var state: VehicleState = server_state.copy()

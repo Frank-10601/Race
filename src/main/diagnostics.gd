@@ -75,4 +75,6 @@ func _build_line() -> String:
 	if vehicle.prediction != null:
 		parts.append("ecart %6.3f m" % vehicle.prediction.last_position_error)
 		parts.append("rejoues %2d" % vehicle.prediction.last_replay_count)
+		if vehicle.prediction.overruns > 0:
+			parts.append("decrochages %d" % vehicle.prediction.overruns)
 	return " | ".join(parts)
