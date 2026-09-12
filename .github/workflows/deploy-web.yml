@@ -80,15 +80,17 @@ jobs:
           path: build/web
           retention-days: 30
 
-      # GitHub Pages doit avoir ete active UNE FOIS a la main sur le depot :
-      #   Settings > Pages > Source : GitHub Actions
-      # Le jeton d'un workflow n'a pas le droit de creer le site lui-meme
-      # (« Resource not accessible by integration »), d'ou l'absence de
-      # l'option `enablement` ici.
+      # `enablement: true` demande a GitHub de creer le site Pages s'il
+      # n'existe pas encore. Cela echoue sur un depot prive sans abonnement
+      # GitHub Pro, ou Pages n'est tout simplement pas disponible : l'API
+      # repond alors « Resource not accessible by integration ». Sur un depot
+      # public, la creation passe.
       - name: Configurer Pages
         id: pages
         continue-on-error: true
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Expliquer comment activer Pages
         if: steps.pages.outcome == 'failure'
