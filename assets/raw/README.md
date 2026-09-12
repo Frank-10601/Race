@@ -49,6 +49,18 @@ git push
 **Ne te soucie ni de l'echelle, ni de l'orientation, ni des noms.** C'est
 justement ce que je corrige. Depose et dis-moi a quoi ca sert.
 
+## Inspecter un modele soi-meme
+
+```bash
+pip install pygltflib numpy      # une seule fois
+tools/inspect_assets.py          # inspecte tout assets/raw/
+tools/inspect_assets.py mon_modele.glb
+```
+
+Le rapport donne les dimensions reelles, l'orientation, le nombre de triangles,
+la taille des textures, et la liste de ce qu'il faut corriger — avec le facteur
+d'echelle exact a appliquer, par exemple.
+
 ## Ce que je fais ensuite
 
 1. **J'inspecte** : dimensions reelles, orientation, nombre de triangles,

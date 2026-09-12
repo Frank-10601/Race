@@ -1,44 +1,25 @@
-# Mettre le jeu en ligne — a faire une seule fois
+# Le jeu en ligne
 
-Le jeu se construit et se publie tout seul a chaque `git push`. Il reste
-**deux reglages a faire une fois** sur GitHub, que seul le proprietaire du depot
-peut faire : un workflow n'a pas le droit de creer un site Pages lui-meme.
+**https://frank-10601.github.io/Race/**
 
----
-
-## 1. Rendre le depot public (si compte GitHub gratuit)
-
-GitHub Pages sur un depot **prive** demande un abonnement **GitHub Pro**. Sur un
-compte gratuit, il faut que le depot soit public.
-
-1. https://github.com/Frank-10601/Race/settings
-2. Tout en bas : **Danger Zone** > **Change visibility** > **Make public**
-3. Confirmer en tapant le nom du depot
-
-> Si tu as deja GitHub Pro, saute cette etape : Pages fonctionne sur un depot
-> prive, et seules les personnes autorisees verront le jeu.
-
-## 2. Activer Pages
-
-1. https://github.com/Frank-10601/Race/settings/pages
-2. **Source** : choisir **GitHub Actions** (et non « Deploy from a branch »)
-3. Il n'y a rien a enregistrer : le choix prend effet immediatement
-
-## 3. Lancer la publication
-
-1. https://github.com/Frank-10601/Race/actions/workflows/deploy-web.yml
-2. **Run workflow** > **Run workflow**
-3. Environ deux minutes plus tard, le jeu est en ligne
-
-**Le lien sera :** https://frank-10601.github.io/Race/
+La mise en place est faite : depot public, Pages alimente par GitHub Actions.
+**Chaque `git push` reconstruit et republie le jeu**, en une minute environ, et
+le lien ne change jamais. Pour republier a la main : onglet **Actions** >
+**Publier la version web** > **Run workflow**.
 
 ---
 
-## Ensuite
+## Si la publication cesse de fonctionner
 
-Plus rien a faire. **Chaque `git push` reconstruit et republie le jeu**, et le
-lien ne change jamais. Tu peux aussi republier a la main depuis l'onglet
-**Actions** > **Publier la version web** > **Run workflow**.
+Verifier dans l'ordre :
+
+1. **Le workflow est-il passe ?**
+   https://github.com/Frank-10601/Race/actions — un echec y est explique.
+2. **Pages pointe-t-il toujours sur Actions ?**
+   https://github.com/Frank-10601/Race/settings/pages — **Source** doit indiquer
+   **GitHub Actions**, et non « Deploy from a branch ».
+3. **Le depot est-il toujours public ?**
+   Repasser le depot en prive coupe Pages, sauf abonnement GitHub Pro.
 
 ---
 

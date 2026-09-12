@@ -37,10 +37,10 @@ godot --path . -- --join 127.0.0.1 --port 8910 --name Kim
 
 ### Version web
 
-Le jeu se construit et se publie **tout seul a chaque `git push`**, via GitHub
-Actions. Lien une fois Pages active : https://frank-10601.github.io/Race/
+**Le jeu est en ligne : https://frank-10601.github.io/Race/**
 
-Deux reglages sont a faire une seule fois sur GitHub : voir **`docs/PUBLIER.md`**.
+Il se reconstruit et se republie **tout seul a chaque `git push`**, via GitHub
+Actions. Le lien ne change jamais. Details et depannage : `docs/PUBLIER.md`.
 
 Pour construire en local :
 
