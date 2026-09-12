@@ -44,6 +44,10 @@ echo "==> Export web"
 # n'applique aucun traitement Jekyll si ce fichier est present.
 touch "$OUTPUT_DIR/.nojekyll"
 
+# Numero de version, sans lequel un navigateur ayant deja ouvert le jeu
+# continue de servir l'ancienne version depuis son cache.
+python3 "$PROJECT_DIR/tools/stamp_web_build.py" "$OUTPUT_DIR"
+
 echo
 echo "==> Termine. Contenu de build/web/ :"
 du -h "$OUTPUT_DIR"/* | sort -k2

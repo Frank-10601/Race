@@ -205,15 +205,21 @@ static func create_name_tag(player_name: String) -> Label3D:
 ## Retourne un dictionnaire vide si le modele est absent ou illisible, ce qui
 ## fait retomber l'appelant sur les primitives.
 static func load_model(model_path: String) -> Dictionary:
-	if model_path.is_empty() or not ResourceLoader.exists(model_path):
+	if model_path.is_empty():
+		print("[vehicule] aucun modele configure : formes primitives")
+		return {}
+	if not ResourceLoader.exists(model_path):
+		push_warning("[vehicule] modele introuvable : %s — formes primitives" % model_path)
 		return {}
 	var scene: PackedScene = load(model_path) as PackedScene
 	if scene == null:
-		push_warning("Modele de vehicule illisible : %s" % model_path)
+		push_warning("[vehicule] modele illisible : %s — formes primitives" % model_path)
 		return {}
 	var instance: Node3D = scene.instantiate() as Node3D
 	if instance == null:
+		push_warning("[vehicule] modele vide : %s — formes primitives" % model_path)
 		return {}
+	print("[vehicule] modele charge : %s" % model_path)
 
 	var body: Node3D = instance.find_child("Body", true, false) as Node3D
 	if body == null:

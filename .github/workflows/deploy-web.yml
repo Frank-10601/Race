@@ -68,6 +68,10 @@ jobs:
           # Sans ce fichier, GitHub Pages ignore les noms commencant par un
           # underscore et applique un traitement Jekyll dont on n'a pas besoin.
           touch build/web/.nojekyll
+          # Numero de version : sans lui, le navigateur d'un joueur qui a deja
+          # ouvert le jeu lui sert l'ancienne version depuis son cache, et les
+          # mises a jour semblent ne jamais arriver.
+          python3 tools/stamp_web_build.py build/web "${GITHUB_SHA::7}"
           ls -la build/web
 
       # Le jeu est aussi telechargeable depuis l'onglet Actions, meme si la
