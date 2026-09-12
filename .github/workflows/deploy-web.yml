@@ -1,0 +1,91 @@
+# Construit la version web et la publie sur GitHub Pages a chaque push.
+#
+# Rien a installer sur ta machine : GitHub telecharge Godot, exporte le jeu et
+# met le site a jour tout seul. Le lien reste le meme d'une fois sur l'autre.
+name: Publier la version web
+
+on:
+  push:
+    branches:
+      - claude/admiring-lovelace-2n21q9
+      - main
+  # Permet aussi de relancer la publication a la main depuis l'onglet Actions.
+  workflow_dispatch:
+
+# Droits necessaires au deploiement sur Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule publication a la fois ; une nouvelle remplace celle en attente.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  build:
+    name: Exporter le jeu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer Godot et ses modeles d'exportation
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -sSL --retry 3 -o godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+
+          curl -sSL --retry 3 -o templates.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          mv templates/* "$TEMPLATE_DIR/"
+
+          godot --version
+
+      - name: Importer les ressources
+        # Premier import : Godot construit son cache. Il signale l'absence de la
+        # scene principale tant que le cache n'existe pas, d'ou le `|| true`.
+        run: godot --headless --import || true
+
+      - name: Exporter en HTML5
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          godot --headless --export-release "Web" build/web/index.html
+          # Sans ce fichier, GitHub Pages ignore les noms commencant par un
+          # underscore et applique un traitement Jekyll dont on n'a pas besoin.
+          touch build/web/.nojekyll
+          ls -la build/web
+
+      - name: Configurer Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Active GitHub Pages sur le depot s'il ne l'est pas encore.
+          enablement: true
+
+      - name: Preparer la publication
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    name: Publier
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deployer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -59,6 +59,21 @@ horizontal_alignment = 1
 [node name="SeparatorTop" type="HSeparator" parent="Center/Panel/Margin/Layout"]
 layout_mode = 2
 
+[node name="SoloButton" type="Button" parent="Center/Panel/Margin/Layout"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "Conduire seul"
+
+[node name="SoloHint" type="Label" parent="Center/Panel/Margin/Layout"]
+modulate = Color(0.55, 0.58, 0.63, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Sans réseau — pour essayer la piste tout de suite"
+horizontal_alignment = 1
+
+[node name="SeparatorSolo" type="HSeparator" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+
 [node name="NameLabel" type="Label" parent="Center/Panel/Margin/Layout"]
 layout_mode = 2
 text = "Pseudo"

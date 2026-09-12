@@ -28,6 +28,7 @@ func _ready() -> void:
 	Net.lag.round_trip_ms = _args.lag_ms
 	Net.lag.jitter_ms = _args.jitter_ms
 
+	_menu.solo_requested.connect(_start_solo)
 	_menu.host_requested.connect(_on_host_requested)
 	_menu.join_requested.connect(_on_join_requested)
 	Net.server_closed.connect(_on_server_closed)
