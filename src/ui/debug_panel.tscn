@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/debug_panel.gd" id="1_debug"]
+
+[node name="DebugPanel" type="PanelContainer"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 352.0
+offset_bottom = 300.0
+mouse_filter = 2
+script = ExtResource("1_debug")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="Text" type="Label" parent="Margin"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "F3"

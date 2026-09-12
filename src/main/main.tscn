@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://src/main/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://src/ui/main_menu.tscn" id="2_menu"]
+[ext_resource type="PackedScene" path="res://src/ui/hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://src/ui/debug_panel.tscn" id="4_debug"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Hud" parent="UI" instance=ExtResource("3_hud")]
+visible = false
+
+[node name="MainMenu" parent="UI" instance=ExtResource("2_menu")]
+visible = false
+
+[node name="DebugPanel" parent="UI" instance=ExtResource("4_debug")]

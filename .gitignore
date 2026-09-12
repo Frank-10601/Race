@@ -1,0 +1,20 @@
+# --- Godot 4 ---
+.godot/
+/android/
+
+# --- Exports et builds ---
+build/
+*.tmp
+
+# --- Systeme ---
+.DS_Store
+Thumbs.db
+*~
+*.swp
+
+# --- Editeurs ---
+.vscode/
+.idea/
+
+# --- Fichiers locaux non versionnes ---
+export_presets.local.cfg

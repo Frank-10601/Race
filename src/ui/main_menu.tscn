@@ -1,0 +1,124 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.078, 0.09, 0.117, 1)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="Layout" type="VBoxContainer" parent="Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 34
+text = "RACE"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/Panel/Margin/Layout"]
+modulate = Color(0.68, 0.71, 0.76, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Course arcade — phase 0"
+horizontal_alignment = 1
+
+[node name="SeparatorTop" type="HSeparator" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+text = "Pseudo"
+
+[node name="NameField" type="LineEdit" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+max_length = 16
+placeholder_text = "Ton pseudo"
+
+[node name="HostButton" type="Button" parent="Center/Panel/Margin/Layout"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Héberger une course"
+
+[node name="SeparatorMiddle" type="HSeparator" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+
+[node name="AddressLabel" type="Label" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+text = "Adresse du serveur"
+
+[node name="AddressRow" type="HBoxContainer" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AddressField" type="LineEdit" parent="Center/Panel/Margin/Layout/AddressRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "127.0.0.1"
+
+[node name="PortField" type="LineEdit" parent="Center/Panel/Margin/Layout/AddressRow"]
+custom_minimum_size = Vector2(92, 0)
+layout_mode = 2
+placeholder_text = "Port"
+
+[node name="JoinButton" type="Button" parent="Center/Panel/Margin/Layout"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Rejoindre"
+
+[node name="SeparatorBottom" type="HSeparator" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+
+[node name="QuitButton" type="Button" parent="Center/Panel/Margin/Layout"]
+layout_mode = 2
+text = "Quitter"
+
+[node name="Status" type="Label" parent="Center/Panel/Margin/Layout"]
+modulate = Color(0.95, 0.78, 0.35, 1)
+custom_minimum_size = Vector2(0, 22)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Hint" type="Label" parent="Center/Panel/Margin/Layout"]
+modulate = Color(0.55, 0.58, 0.63, 1)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Flèches ou ZQSD/WASD · Espace : frein à main · R : remise en piste · C : caméra · F3 : débogage"
+horizontal_alignment = 1
+autowrap_mode = 3

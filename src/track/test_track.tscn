@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://ctrack0testpist"]
+
+[ext_resource type="Script" path="res://src/track/test_track.gd" id="1_track"]
+
+[node name="TestTrack" type="Node3D"]
+script = ExtResource("1_track")
